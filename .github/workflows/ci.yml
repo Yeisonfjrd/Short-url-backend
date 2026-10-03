@@ -13,4 +13,4 @@ jobs:
         with:
           go-version-file: go.mod
       - run: go vet ./...
-      - run: go build ./src
+      - run: go build -o /tmp/server ./src
