@@ -5,15 +5,12 @@ on:
   pull_request:
     branches: [main, master]
 jobs:
-  ci:
+  go:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-go@v5
         with:
-          node-version: '20'
-          cache: 'npm'
-      - run: npm ci
-      - run: npm run lint --if-present
-      - run: npm test --if-present
-      - run: npm run build --if-present
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: go build ./src
