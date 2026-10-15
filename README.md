@@ -4,7 +4,7 @@ The API behind [the URL shortener](https://github.com/Yeisonfjrd/Short-url-front
 
 ```
 POST /api/shorten            {"url": "https://..."}  ->  {"short_url": "https://.../Ab3x..."}
-GET  /:shortCode             301 to the original URL, counts the visit
+GET  /:shortCode             302 to the original URL, counts the visit
 GET  /api/stats/:shortCode   visits, last visit, created at
 GET  /health                 used by Railway's health check
 ```
@@ -23,11 +23,12 @@ go run ./src
 
 GORM creates the table on startup. With Docker: `docker build -t short-url . && docker run -p 8080:8080 -e DATABASE_URL=... short-url`.
 
-## Things I'd change
+## Decisions
 
-- **The redirect is a 301.** Browsers cache it, so after someone's first click the request never reaches the server again and the visit counter undercounts. A 302 would make the stats honest.
-- **Visits are read, incremented and written back.** Two clicks at the same time can count as one. `UPDATE ... SET visits = visits + 1` (`gorm.Expr`) fixes it.
-- **The code keeps base64's `=` padding.** It works, but `RawURLEncoding` would give a cleaner 11-character code.
+- **302, not 301.** A 301 gets cached by the browser, so after the first click the request never reaches the server and the visit counter undercounts. It was a 301 at first.
+- **The visit count goes up in the database.** It used to read `visits`, add 1 in Go and write it back, so two clicks at the same time could count as one. Now it's `UPDATE ... SET visits = visits + 1` through `gorm.Expr`.
+- **Codes have no base64 padding** (`RawURLEncoding`): 11 characters, no trailing `=`.
+
+## Still missing
+
 - **No URL validation.** Anything non-empty gets stored, including strings that aren't URLs.
-
-`server.js` is an Express version of the same API. The Go one is what the Dockerfile builds and Railway runs.

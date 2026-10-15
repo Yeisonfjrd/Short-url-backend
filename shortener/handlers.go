@@ -9,6 +9,7 @@ import (
 	"url-shortener/database"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 )
 
 type ShortenRequest struct {
@@ -32,7 +33,7 @@ func (s *URLShortener) CreateShortURL(c *gin.Context) {
 	}
 
 	hash := sha256.Sum256([]byte(req.URL))
-	shortCode := base64.URLEncoding.EncodeToString(hash[:8])
+	shortCode := base64.RawURLEncoding.EncodeToString(hash[:8])
 
 	var existingURL database.URL
 	result := database.GetDatabase().Where("original_url = ?", req.URL).First(&existingURL)
@@ -67,12 +68,12 @@ func (s *URLShortener) RedirectToOriginalURL(c *gin.Context) {
 		return
 	}
 
-	database.GetDatabase().Model(&url).Updates(database.URL{
-		Visits:    url.Visits + 1,
-		LastVisit: time.Now(),
+	database.GetDatabase().Model(&url).UpdateColumns(map[string]interface{}{
+		"visits":     gorm.Expr("visits + ?", 1),
+		"last_visit": time.Now(),
 	})
 
-	c.Redirect(http.StatusMovedPermanently, url.OriginalURL)
+	c.Redirect(http.StatusFound, url.OriginalURL)
 }
 
 func (s *URLShortener) GetStats(c *gin.Context) {
